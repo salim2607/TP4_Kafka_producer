@@ -17,5 +17,9 @@ public interface CommandeItf {
 
     void addArticleToCommande(Long commandeId, String articleNom, int quantity, double prix);
 
-    void removeArticleFromCommande(Long commandeId, String articleNom);
+    void removeArticleFromCommande(Long commandeId, Long articleId);
+
+    public double calculTotalCommande(Commande commande);
+
+    void valider(Long commandeId);
 }

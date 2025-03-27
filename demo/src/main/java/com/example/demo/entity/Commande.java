@@ -23,10 +23,21 @@ public class Commande {
     @OneToMany
     private List<LigneCommande> ligneCommande;
 
+    private String etat;
+
+    public String getEtat() {
+        return etat;
+    }
+
+    public void setEtat(String etat) {
+        this.etat = etat;
+    }
+
     public Commande() {}
 
     public Commande(String nom) {
         this.nom = nom;
+        this.etat = "En cours";
     }
 
     public Long getId() {
