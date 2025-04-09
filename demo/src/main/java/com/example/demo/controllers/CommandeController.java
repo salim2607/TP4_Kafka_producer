@@ -1,26 +1,30 @@
 package com.example.demo.controllers;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.view.RedirectView;
 
 import com.example.demo.entity.Client;
 import com.example.demo.entity.Commande;
-import com.example.demo.entity.LigneCommande;
 import com.example.demo.services.ClientItf;
 import com.example.demo.services.CommandeItf;
 
 import jakarta.servlet.http.HttpSession;
 
+
 @Controller
 @RequestMapping("/store/client")
 public class CommandeController {
-
+    
     @Autowired
     private CommandeItf service;
     
@@ -28,101 +32,74 @@ public class CommandeController {
     private ClientItf clientService;
 
     @PostMapping("/createCommand")
-    public RedirectView createCommand(@RequestParam String nom, HttpSession session) {
+    public RedirectView create(@RequestParam String nom, HttpSession session) {
         String email = (String) session.getAttribute("email");
-        if (email == null || nom == null || nom.trim().isEmpty()) {
-            return new RedirectView("/store/home?error=invalidRequest");
+        if (email == null || clientService.findByEmail(email) == null) {
+            return new RedirectView("/store/home");
         }
-        
         Client client = clientService.findByEmail(email);
-        if (client == null) {
-            return new RedirectView("/store/home?error=clientNotFound");
-        }
-        
         service.create(nom, client);
         return new RedirectView("/store/client");
     }
 
     @PostMapping("/addArticle")
-    public RedirectView addArticle(@RequestParam Long commandeId, @RequestParam String articleNom,
-                                   @RequestParam int quantity, @RequestParam double price, HttpSession session) {
+    public RedirectView addArticle(@RequestParam Long commandeId, @RequestParam String articleNom, @RequestParam int quantity, @RequestParam double price, HttpSession session) {
         String email = (String) session.getAttribute("email");
-        if (email == null || quantity <= 0 || price <= 0) {
-            return new RedirectView("/store/home?error=invalidInput");
+        if (email == null || clientService.findByEmail(email) == null) {
+            return new RedirectView("/store/home");
         }
-        
-        Optional<Commande> optionalCommande = service.findById(commandeId);
-        if (optionalCommande.isEmpty() || !optionalCommande.get().getClient().getEmail().equals(email)) {
-            return new RedirectView("/store/home?error=unauthorized");
-        }
-
+       
         service.addArticleToCommande(commandeId, articleNom, quantity, price);
         return new RedirectView("/store/client/commande/" + commandeId);
     }
 
     @PostMapping("/removeArticle")
-    public RedirectView removeArticle(@RequestParam Long commandeId, @RequestParam String articleNom, HttpSession session) {
+    public RedirectView removeArticle(@RequestParam Long commandeId, @RequestParam Long articleId, HttpSession session) {
         String email = (String) session.getAttribute("email");
-        if (email == null) {
+        if (email == null || clientService.findByEmail(email) == null) {
             return new RedirectView("/store/home");
         }
-        
-        Optional<Commande> optionalCommande = service.findById(commandeId);
-        if (optionalCommande.isEmpty() || !optionalCommande.get().getClient().getEmail().equals(email)) {
-            return new RedirectView("/store/home?error=unauthorized");
-        }
-
-        service.removeArticleFromCommande(commandeId, articleNom);
+        service.removeArticleFromCommande(commandeId, articleId);
         return new RedirectView("/store/client/commande/" + commandeId);
     }
 
     @GetMapping("/commande/{id}")
-    public ModelAndView commandeDetails(@PathVariable Long id, HttpSession session) {
+    public Object commandePage(@PathVariable Long id, HttpSession session) {
         String email = (String) session.getAttribute("email");
-        if (email == null) {
-            return new ModelAndView("redirect:/store/home");
+        if (email == null || clientService.findByEmail(email) == null) {
+            return new RedirectView("/store/home");
+        }
+        try {
+            Commande commande = service.findById(id).orElseThrow();
+            var model = Map.of(
+            "commande", commande,
+            "articles", commande.getLigneCommande()
+            );
+            return new ModelAndView("/store/commande", model);
+        } catch (NoSuchElementException e) {
+            return new RedirectView("/store/client");
         }
         
-        Optional<Commande> optionalCommande = service.findById(id);
-        if (optionalCommande.isEmpty() || !optionalCommande.get().getClient().getEmail().equals(email)) {
-            return new ModelAndView("redirect:/store/home?error=unauthorized");
-        }
-        
-        Commande commande = optionalCommande.get();
-        List<LigneCommande> articles = commande.getLigneCommande();
-        double total = calculateTotal(articles);
-        
-        return new ModelAndView("/store/commande")
-                .addObject("commande", commande)
-                .addObject("articles", articles)
-                .addObject("total", total);
     }
 
-    @GetMapping("/commande/print/{id}")
-    public ModelAndView printCommande(@PathVariable Long id, HttpSession session) {
+    @PostMapping("/commande/print")
+    public Object printPage(HttpSession session, @RequestParam Long commandeId) {
         String email = (String) session.getAttribute("email");
-        if (email == null) {
-            return new ModelAndView("redirect:/store/home");
+        if (email == null || clientService.findByEmail(email) == null) {
+            return new RedirectView("/store/home");
         }
-        
-        Optional<Commande> optionalCommande = service.findById(id);
-        if (optionalCommande.isEmpty() || !optionalCommande.get().getClient().getEmail().equals(email)) {
-            return new ModelAndView("redirect:/store/home?error=unauthorized");
+        try {
+            Commande commande = service.findById(commandeId).orElseThrow();
+            var model = Map.of(
+            "commande", commande,
+            "articles", commande.getLigneCommande(),
+            "totalCommande", service.calculTotalCommande(commande)
+            );
+            return new ModelAndView("/store/print", model);
+        } catch (NoSuchElementException e) {
+            return new RedirectView("/store/client");
         }
-        
-        Commande commande = optionalCommande.get();
-        List<LigneCommande> articles = commande.getLigneCommande();
-        double total = calculateTotal(articles);
-        
-        return new ModelAndView("/store/print")
-                .addObject("commande", commande)
-                .addObject("articles", articles)
-                .addObject("total", total);
     }
+    
 
-    private double calculateTotal(List<LigneCommande> ligneCommandes) {
-        return ligneCommandes.stream()
-                .mapToDouble(lc -> lc.getNbArticle() * lc.getArticle().getPrixUnitaire())
-                .sum();
-    }
 }

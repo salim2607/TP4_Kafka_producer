@@ -20,13 +20,11 @@
 </head>
 <body class="bg-light">
     <div class="container py-4">
+        <!-- En-tête de la commande -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h1 class="h3">Commande : <span th:text="${commande.nom}" class="text-primary"></span></h1>
                 <h3 class="h5 mt-2">Total : <span th:text="${'€' + #numbers.formatDecimal(total, 1, 2)}" class="text-success"></span></h3>
-                <p th:if="${commande.soumis}" class="text-success fw-bold">
-                    <i class="bi bi-check-circle"></i> Commande soumise
-                </p>
             </div>
             <div>
                 <a th:href="@{/store/client/commande/print/{id}(id=${commande.id})}" class="btn btn-info me-2">
@@ -36,86 +34,73 @@
             </div>
         </div>
 
-        <!-- Message de succès -->
-        <div th:if="${param.success}" class="alert alert-success alert-dismissible fade show">
-            <span th:text="${param.success}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-
-        <div class="card border-0">
+        <!-- Liste des articles -->
+        <div class="card border-0 mb-4">
             <div class="card-body">
                 <h2 class="h5 mb-4">Articles</h2>
-
-                <div class="row g-3">
-                    <div class="col-12">
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Nom</th>
-                                        <th>Quantité</th>
-                                        <th>Prix unitaire</th>
-                                        <th>Total</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr th:each="ligneCommande : ${articles}">
-                                        <td th:text="${ligneCommande.article.nomArticle}"></td>
-                                        <td th:text="${ligneCommande.nbArticle}"></td>
-                                        <td th:text="${'€' + #numbers.formatDecimal(ligneCommande.article.prixUnitaire, 1, 2)}"></td>
-                                        <td th:text="${'€' + #numbers.formatDecimal(ligneCommande.nbArticle * ligneCommande.article.prixUnitaire, 1, 2)}"></td>
-                                        <td>
-                                            <form th:action="@{/store/client/removeArticle}" method="post" th:unless="${commande.soumis}">
-                                                <input type="hidden" name="commandeId" th:value="${commande.id}">
-                                                <input type="hidden" name="articleNom" th:value="${ligneCommande.article.nomArticle}">
-                                                <button type="submit" class="btn btn-danger btn-sm">
-                                                    <i class="bi bi-trash"></i> Supprimer
-                                                </button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Formulaire d'ajout d'article (seulement si commande non soumise) -->
-                    <div class="col-12" th:unless="${commande.soumis}">
-                        <div class="card article-card">
-                            <div class="card-body">
-                                <h3 class="h5 card-title mb-3">Ajouter un article</h3>
-                                <form th:action="@{/store/client/addArticle}" method="post" class="row g-2">
-                                    <input type="hidden" name="commandeId" th:value="${commande.id}">
-                                    <div class="col-md-4">
-                                        <input type="text" name="articleNom" class="form-control" placeholder="Nom article" required>
-                                    </div>
-                                    <div class="col-md-2">
-                                        <input type="number" name="quantity" class="form-control" placeholder="Quantité" min="1" required>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <input type="number" step="0.01" name="price" class="form-control" placeholder="Prix unitaire" min="0.01" required>
-                                    </div>
-                                    <div class="col-md-3">
-                                        <button type="submit" class="btn btn-primary w-100">Ajouter</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bouton pour soumettre la commande (seulement si commande non soumise) -->
-                    <div class="col-12 text-center mt-4" th:unless="${commande.soumis}">
-                        <form th:action="@{/store/client/submitCommand}" method="post">
-                            <input type="hidden" name="commandeId" th:value="${commande.id}">
-                            <button type="submit" class="btn btn-success btn-lg" th:disabled="${articles.empty}">
-                                <i class="bi bi-send"></i> Soumettre la commande
-                            </button>
-                            <p th:if="${articles.empty}" class="text-danger mt-2">Ajoutez au moins un article pour soumettre la commande</p>
-                        </form>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nom</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Total</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="ligneCommande : ${articles}">
+                                <td th:text="${ligneCommande.article.nomArticle}"></td>
+                                <td th:text="${ligneCommande.nbArticle}"></td>
+                                <td th:text="${'€' + #numbers.formatDecimal(ligneCommande.article.prixUnitaire, 1, 2)}"></td>
+                                <td th:text="${'€' + #numbers.formatDecimal(ligneCommande.nbArticle * ligneCommande.article.prixUnitaire, 1, 2)}"></td>
+                                <td>
+                                    <form th:action="@{/store/client/removeArticle}" method="post">
+                                        <input type="hidden" name="commandeId" th:value="${commande.id}">
+                                        <input type="hidden" name="articleId" th:value="${ligneCommande.article.id}">
+                                        <button type="submit" class="btn btn-danger btn-sm">
+                                            <i class="bi bi-trash"></i> Supprimer
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
+        </div>
+
+        <!-- Formulaire d'ajout d'article -->
+        <div class="card article-card mb-4">
+            <div class="card-body">
+                <h3 class="h5 card-title mb-3">Ajouter un article</h3>
+                <form th:action="@{/store/client/addArticle}" method="post" class="row g-3">
+                    <input type="hidden" name="commandeId" th:value="${commande.id}">
+                    <div class="col-md-4">
+                        <input type="text" name="articleNom" class="form-control" placeholder="Nom article" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" name="quantity" class="form-control" placeholder="Quantité" min="1" required>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="number" step="0.01" name="price" class="form-control" placeholder="Prix unitaire" min="0.01" required>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary w-100">Ajouter</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Bouton pour valider la commande -->
+        <div class="text-center">
+            <form th:action="@{/store/client/valider}" method="post">
+                <input type="hidden" name="commandeId" th:value="${commande.id}">
+                <button type="submit" class="btn btn-success btn-lg">
+                    <i class="bi bi-check-circle"></i> Valider la commande
+                </button>
+            </form>
         </div>
     </div>
 
